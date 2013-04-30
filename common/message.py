@@ -74,11 +74,11 @@ class Message():
         msg['level'] = 'ATTACK'
         msgtopublish = copy.deepcopy(msg)
         self.put_msg(msg)
-        del msgtopublish['timestamp']$
-        del msgtopublish['level']$
-        msgtopublish['honeypotID'] = None$
-        HPfeedsHnadler = HpfeedsPublish()$
-        HPfeedsHnadler.publish(str(msgtopublish))$
+        del msgtopublish['timestamp']
+        del msgtopublish['level']
+        msgtopublish['honeypotID'] = None
+        HPfeedsHnadler = HpfeedsPublish()
+        HPfeedsHnadler.publish(str(msgtopublish))
         
     def save_pcap(self, attack, pkt):
         hash_str = md5.md5(str(pkt)).hexdigest()
