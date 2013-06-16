@@ -7,6 +7,7 @@ import struct, os
 class Globalpot(threading.Thread):
     
     def __init__(self, cfg, msg_queue):
+        self.stop = True
         threading.Thread.__init__(self)
         self.iface = cfg['iface']
         
@@ -70,6 +71,9 @@ class Globalpot(threading.Thread):
         print "The genuine Router Advertisement is: "
         self.print_ra(self.genuine_ra)
     
+    def stop_sniff(self, pkt):
+        return self.stop
+
     def run(self):
         globalpot_filter = "ip6 and (dst host ff02::1 or ff02::1:2)"
         globalpot_lfilter = lambda (r): IPv6 in r and (r[IPv6].dst == 'ff02::1' or r[IPv6].dst == 'ff02::1:2')

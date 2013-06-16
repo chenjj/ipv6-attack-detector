@@ -57,6 +57,7 @@ class Analysis():
     def regular_ns_dad(self):
         target = self.send_ns(True)
         self.regular_ns_dad_timer = threading.Timer(10.0, self.regular_ns_dad)
+        self.regular_ns_dad_timer.setDaemon(True)
         self.regular_ns_dad_timer.start()
         
     # Detect the THC-IPv6 dos-new-ip6 attacking.
@@ -93,6 +94,7 @@ class Analysis():
             self.solicited_targets.append(target)
         #global regular_ns_timer
         self.regular_ns_timer = threading.Timer(10.0, self.regular_ns)
+        self.regular_ns_timer.setDaemon(True)
         self.regular_ns_timer.start()
     
     # Detect the THC-IPv6: parasite6 attacking.

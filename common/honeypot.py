@@ -20,7 +20,10 @@ class Honeypot(threading.Thread):
         # TODO: Stop the honeypot at any time. (By disabling all the configurable options.)
         # Stop flag
         self.stop = False
-
+        
+        # set Daemon
+        self.daemon = True
+        
         #all_nodes_addr = inet_pton(socket.AF_INET6, "ff02::1")
         self.mac = ""
         self.iface_id = ""
@@ -92,6 +95,9 @@ class Honeypot(threading.Thread):
     def __del__(self):
         self.log.close()
     
+    def stop_sniff(self, pkt):
+        return self.stop
+    
     def run(self):
         log_msg = "Start."
         self.log.info(log_msg)
@@ -101,9 +107,12 @@ class Honeypot(threading.Thread):
         
         ip6_filter = "ip6 and not tcp and not udp"
         ip6_lfilter = lambda (r): IPv6 in r and TCP not in r and UDP not in r and r[IPv6].dst in self.dst_addrs
-        sniff(iface=self.iface, filter=ip6_filter, lfilter=ip6_lfilter, prn=self.process)
-
+        
+        sniff(iface=self.iface, filter=ip6_filter, lfilter=ip6_lfilter, prn=self.process, stop_filter=self.stop_sniff, timeout=1)
+    
     def process(self, pkt):
+        if self.stop == True:
+            return
         if self.pre_attack_detector(pkt) != 0:
             return
         # Check spoofing.
@@ -408,6 +417,7 @@ class Honeypot(threading.Thread):
                     self.send_NDP_NS(new_addr, dad_flag=True)
                     # Check if the address has been used by other nodes after 5 seconds.
                     dad_check = threading.Timer(5.0, self.do_DAD, args = [new_addr])
+                    dad_check.setDaemon(True)
                     dad_check.start()
                     self.dad_timer[new_addr] = dad_check
         else:
@@ -436,6 +446,7 @@ class Honeypot(threading.Thread):
         timestamp, valid_lifetime, preferred_lifetime = time_list
         if valid_lifetime != 0xffffffff: # non-infinity time.
             self.addr_timer[new_addr] = threading.Timer(valid_lifetime, self.del_addr, args = [new_addr])
+            self.addr_timer[new_addr].setDaemon(True)
             self.addr_timer[new_addr].start()
         self.src_addrs.append(new_addr)
         self.dst_addrs.append(new_addr)
@@ -455,6 +466,7 @@ class Honeypot(threading.Thread):
             del self.addr_timer[addr]
         if valid_lifetime != 0xffffffff: # non-infinity time.
             self.addr_timer[addr] = threading.Timer(valid_lifetime, self.del_addr, args = [addr])
+            self.addr_timer[addr].setDaemon(True)
             self.addr_timer[addr].start()
         log_msg = "Updated the address [%s]." % addr
         self.log.info(log_msg)
@@ -522,6 +534,7 @@ class Honeypot(threading.Thread):
                 del self.solicited_targets[target]
         if dad_flag == False:
             del_solicited_timer = threading.Timer(5.0, del_solicited_target, args=[target])
+            del_solicited_timer.setDaemon(True)
             del_solicited_timer.start()
         return
     

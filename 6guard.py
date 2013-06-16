@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import os, threading, time, sys
+import signal
 from Queue import Queue
 from common import logger
 from common.honeypot import Honeypot
@@ -27,6 +28,10 @@ class SixGuard():
         # Honeypots and Globalpot
         self.honeypots = {} #{'name'-> [conf, thread_instance]}
         self.globalpot_cfg = None
+        self.gp = None
+        
+        #event handle thread status
+        self.event_stop = False
         
         # Message management
         self.msg_queue = Queue()
@@ -45,7 +50,7 @@ class SixGuard():
     
     # Display, log, analyze, and report the EVENT/ATTACK messages.
     def handle_msg(self):
-        while True:
+        while self.event_stop == False:
             if self.msg_queue.qsize() > 0:
                 msg = self.msg_queue.get()
                 if msg['level'] == 'EVENT' and self.event_handler != None:
@@ -122,13 +127,21 @@ class SixGuard():
             if hp != None:
                 self.send_command(cfg['name'], "STOP")
         return
-            
+    
+    def stop_eventhandle(self):
+        if self.msg_handler != None:
+            self.event_stop = True
+    
     def start_globalpot(self):
         if self.globalpot_cfg != None:
-            gp = Globalpot(self.globalpot_cfg, self.msg_queue)
-            gp.setDaemon(True)
-            gp.start()
+            self.gp = Globalpot(self.globalpot_cfg, self.msg_queue)
+            self.gp.setDaemon(True)
+            self.gp.start()
         return
+    
+    def stop_globalpot(self):
+        if self.gp !=None:
+           self.gp.stop = True
     
     def format_msg(self, msg):
         time_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(msg['timestamp']))
@@ -173,15 +186,19 @@ def main():
         sys.exit()
     sixguard.start_all_honeypots()
     sixguard.start_globalpot()
-        
+    
     if sixguard.event_handler != None:
         sixguard.event_handler.active_detection()
-        
-    try:
-        raw_input("SixGuard is running...\nPress <Ctrl>+Z to stop.\n")
-    except KeyboardInterrupt:
+    
+    def stop_6guard(signal, frame):
         sixguard.stop_all_honeypots()
-        del sixguard
-            
+        sixguard.stop_globalpot()
+        sys.exit()
+    
+    signal.signal(signal.SIGINT, stop_6guard)
+    
+    while True:
+        raw_input("SixGuard is running...\nPress <Ctrl>+C to stop.\n")
+
 if __name__ == "__main__":
     main()
