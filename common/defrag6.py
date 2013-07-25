@@ -53,6 +53,21 @@ frag_tracker_dict = dict()
 #the global engine for defragment
 frag_context = Frag6Context()
 
+def Frag6CheckTTL(pkt, frag_tracker):
+    """Check the TTL value of each fragment"""
+    if pkt[IPv6].hlim < frag_context.min_ttl:
+        print "Warning: TLL is too small"
+        return 1
+    return 0
+
+def Frag6CheckTinyFrag(frag_tracker, pkt):
+    """Check the size of fragment"""
+    #if the none-last fragment is smaller than (1280-48) bytes, record it
+    if len(pkt[IPv6ExtHdrFragment].payload) < frag_context.min_frag_len and frag_tracker.frag_flag & FRAG_GOT_LAST == 0:
+       print "Warning: Tiny Fragment!"
+       return 1
+    return 0
+
 def PrintFrags(frags):
     """Print the information of fragments"""
     for frag in frags:
@@ -64,6 +79,7 @@ def Frag6NewTracker(pkt, frag_key):
     temp_tracker = frag_tracker_dict[frag_key]
     temp_tracker.src = pkt[IPv6].src
     temp_tracker.dst = pkt[IPv6].dst
+    temp_tracker.ttl = pkt[IPv6].hlim
     temp_tracker.frag_id = pkt[IPv6ExtHdrFragment].id
     #record the time when the first fragment arrives
     temp_tracker.frag_time = datetime.datetime.now()
@@ -128,6 +144,8 @@ def Frag6Insert(pkt, frag_tracker,frag_key):
     if Frag6Expire(pkt,frag_tracker,frag_key) == FRAG_TRACKER_TIMEOUT:
         del frag_tracker_dict[frag_key]
         return FRAG_INSERT_TIMEOUT
+    if Frag6CheckTTL(pkt, frag_tracker):
+        return FRAG_INSERT_TTL
     #if the first fragment arrives, store it and set the flag
     if frag_tracker.frag_flag & FRAG_GOT_FIRST == 0:
         if pkt[IPv6ExtHdrFragment].offset == 0:
@@ -175,6 +193,7 @@ def Frag6Insert(pkt, frag_tracker,frag_key):
                     return FRAG_INSERT_ANOMALY
                 pkt[IPv6ExtHdrFragment].payload = str(temp_pkt[IPv6ExtHdrFragment].payload)[:0-overlap]
                 pkt[IPv6ExtHdrFragment].underlayer.plen = temp_pkt[IPv6ExtHdrFragment].underlayer.plen - overlap
+    Frag6CheckTinyFrag(frag_tracker, pkt)
     frag_tracker.frag_bytes += len(pkt[IPv6ExtHdrFragment].payload)
     frag_tracker.frags.insert(item, pkt)
     return FRAG_INSERT_OK
