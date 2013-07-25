@@ -3,6 +3,7 @@ from scapy.all import *
 from common import *
 import message
 import struct, os
+from defrag6 import *
         
 class Globalpot(threading.Thread):
     
@@ -84,6 +85,14 @@ class Globalpot(threading.Thread):
     def process(self, pkt):
         #if self.pre_attack_detector(pkt) != 0:
         #    return
+        #if this pkt is a fragment, reassembly it
+        if IPv6ExtHdrFragment in pkt:
+            temp_pkt = None
+            temp_pkt = Frag6Defrag(pkt)
+            if temp_pkt == None:
+                return
+            else:
+                pkt = temp_pkt
         if pkt[IPv6].dst == 'ff02::1':
             if ICMPv6ND_RA in pkt:
                 self.ra_guard(pkt)
