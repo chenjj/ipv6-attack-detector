@@ -86,8 +86,11 @@ class Globalpot(threading.Thread):
     def process(self, pkt):
         #if self.pre_attack_detector(pkt) != 0:
         #    return
+        #if the pkt has extension headers, check it
         if "IPv6ExtHdr" in pkt.summary():
-            check_extheader_order(pkt)
+            if check_extheader_order(pkt) == 1:
+                extheaders = [] #signature of extension headers
+                pkt = correct_abused_extheader(pkt, extheaders)
         #if this pkt is a fragment, reassembly it
         if IPv6ExtHdrFragment in pkt:
             temp_pkt = None

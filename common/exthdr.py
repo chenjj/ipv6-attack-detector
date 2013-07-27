@@ -23,3 +23,31 @@ def check_extheader_order(pkt):
         self.msg.put_event(msg)
         return 1
     return 0
+
+def correct_abused_extheader(pkt, extheaders):
+    """try to correct the invalid extension headers, return corrected packet"""
+    has_frag_header = 0
+    pkt_index = 1
+    before_frag_index = 0
+    remain_part = None
+    pkt = pkt.__class__(str(pkt))
+    while isinstance(pkt[pkt_index+1],_IPv6ExtHdr):
+        #record the value of extension headers
+        extheaders.append(pkt[pkt_index].nh)
+        #remove the redundant fragment extension headers and only keep the last one
+        if pkt[pkt_index].nh == 44:
+            if has_frag_header == 0:
+                has_frag_header = 1
+                before_frag_index = pkt_index
+            remain_part = pkt[pkt_index].payload
+        pkt_index += 1
+    extheaders.append(pkt[pkt_index].nh)
+    #rebuild the packet
+    if IPv6ExtHdrFragment in pkt:
+        temp_pkt = copy.deepcopy(pkt)
+        temp_pkt[before_frag_index].payload = None 
+        temp_pkt[before_frag_index].payload= str(remain_part)
+        temp_pkt[before_frag_index].plen = len(str(remain_part))
+        temp_pkt = temp_pkt.__class__(str(temp_pkt))
+    pkt = temp_pkt
+    return pkt
