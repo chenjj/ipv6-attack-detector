@@ -1,3 +1,5 @@
+from scapy.layers.inet6 import _IPv6ExtHdr
+
 #Check the order and count of extension header options
 #ret: 0: Valid extension header, do nothing
 #ret: 1: The order or count of extension header is invalid, log the event, 
