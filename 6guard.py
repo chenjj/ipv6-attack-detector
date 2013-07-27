@@ -9,6 +9,7 @@ import ConfigParser
 from common import config
 from common.common import *
 from common import event
+from common.textlog import *
 
 conf_dir = "./conf"
 log_dir = "./log"
@@ -17,12 +18,25 @@ pcap_dir = "./pcap"
 class SixGuard():
     
     def __init__(self):
-        # Log
-        attack_log_filename = os.path.join(log_dir, "attack.log")
-        self.attack_log = logger.Log(attack_log_filename, auto_timestamp = 0)
-        self.attack_log.set_print_level(3) # Only print the attacking message but not the event message.
-        
-        center_log_filename = os.path.join(log_dir, "center.log")
+        # load global config file
+        conf_parser = ConfigParser.ConfigParser()
+        conf_parser.read(global_config)
+        self.dbloggers = []
+        self.options = {
+        "hpfeeds": conf_parser.get("database_hpfeeds", "enabled").encode('latin1'), 
+        "mongodb": conf_parser.get("database_mongodb", "enabled").encode('latin1'),
+        "textlog": conf_parser.get("database_textlog", "enabled").encode('latin1'), 
+        "center_log": conf_parser.get("logging", "center_log").encode('latin1')
+        }
+        if self.options["hpfeeds"] == "True":
+            pass
+        if self.options["mongodb"] == "True":
+            pass
+        if self.options["textlog"] == "True":
+            textlog = TextDBLogger(conf_parser)
+            self.dbloggers.append(textlog)        
+
+        center_log_filename = self.options["center_log"]
         self.center_log = logger.Log(center_log_filename)
         
         # Honeypots and Globalpot
@@ -43,8 +57,13 @@ class SixGuard():
         # Handle the event message, sometimes will generate an attack message.
         self.event_handler = event.Analysis(self.msg_queue, self.honeypots)
         
+    def log_dispatch(self, msg):
+        for dblog in self.dbloggers:
+            dblog.write(msg) 
+
     def __del__(self):
-        self.attack_log.close()
+        for dblog in self.dbloggers:
+            dblog.close()
         self.center_log.close()
     
     
