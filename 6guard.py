@@ -17,7 +17,7 @@ pcap_dir = "./pcap"
 
 class SixGuard():
     
-    def __init__(self):
+    def __init__(self, global_config="6guard.cfg"):
         # load global config file
         conf_parser = ConfigParser.ConfigParser()
         conf_parser.read(global_config)
