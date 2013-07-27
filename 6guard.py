@@ -10,6 +10,7 @@ from common import config
 from common.common import *
 from common import event
 from common.textlog import *
+from common.hpfeedslog import HpfeedsDBLogger
 
 conf_dir = "./conf"
 log_dir = "./log"
@@ -29,7 +30,8 @@ class SixGuard():
         "center_log": conf_parser.get("logging", "center_log").encode('latin1')
         }
         if self.options["hpfeeds"] == "True":
-            pass
+            hpfeeds = HpfeedsDBLogger(conf_parser)
+            self.dbloggers.append(hpfeeds)
         if self.options["mongodb"] == "True":
             pass
         if self.options["textlog"] == "True":
