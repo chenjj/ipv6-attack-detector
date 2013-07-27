@@ -1,4 +1,5 @@
 from scapy.layers.inet6 import _IPv6ExtHdr
+from scapy.all import *
 
 #Check the order and count of extension header options
 #ret: 0: Valid extension header, do nothing
@@ -12,7 +13,7 @@ def check_extheader_order(pkt):
     next_headers_vals = [0, 60, 43, 44, 51, 50, 60, 135, 59, 6, 17, 58, 0]
     pkt_index = 1
     header_val_index = 0
-    while  "IPv6ExtHdr" in pkt[pkt_index].summary() and header_val_index < len(next_headers_vals):
+    while  isinstance(pkt[pkt_index],_IPv6ExtHdr) and header_val_index < len(next_headers_vals):
         if pkt[pkt_index].nh == next_headers_vals[header_val_index]:
             pkt_index = pkt_index + 1
             header_val_index = header_val_index + 1
@@ -50,12 +51,3 @@ def correct_abused_extheader(pkt, extheaders):
     pkt = temp_pkt
     return pkt
 
-def show_extheader_abuse_msg(self, pkt, extheaders):
-    '''show the msg about extension header abuse'''
-    msg = self.msg.new_msg(pkt, save_pcap = 0)
-    msg['type'] = "Invalid Extension Header"
-    msg['name'] = "Invalid Extension Header in packets"
-    msg['util'] = "Crafting malformed Packets"
-    msg['headers'] = extheaders
-    self.msg.put_event(msg)
-    return

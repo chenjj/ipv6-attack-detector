@@ -91,11 +91,12 @@ class Globalpot(threading.Thread):
             if check_extheader_order(pkt) == 1:
                 extheaders = [] #signature of extension headers
                 pkt = correct_abused_extheader(pkt, extheaders)
-                show_extheader_abuse_msg(pkt, extheaders)
+                self.show_extheader_abuse_msg(pkt, extheaders)
         #if this pkt is a fragment, reassembly it
         if IPv6ExtHdrFragment in pkt:
             temp_pkt = None
-            temp_pkt = Frag6Defrag(pkt)
+            defrag = Frag6Reassembly(self.msg)
+            temp_pkt = defrag.Frag6Defrag(pkt)
             if temp_pkt == None:
                 return
             else:
@@ -111,6 +112,16 @@ class Globalpot(threading.Thread):
                 self.host_discovery_guard(pkt)
         elif pkt[IPv6].dst == 'ff02::1:2' and DHCP6_Solicit in pkt:
             self.dhcpc_guard(pkt)
+
+    def show_extheader_abuse_msg(self, pkt, extheaders):
+        '''show the msg about extension header abuse'''
+        msg = self.msg.new_msg(pkt, save_pcap = 0)
+        msg['type'] = "Invalid Extension Header"
+        msg['name'] = "Invalid Extension Header in packets"
+        msg['util'] = "Crafting malformed Packets"
+        msg['headers'] = extheaders
+        self.msg.put_event(msg)
+        return
 
     # Handle the IPv6 invalid extention header options. (One of Nmap's host discovery technique.)
     
