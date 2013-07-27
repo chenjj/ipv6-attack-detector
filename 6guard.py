@@ -74,9 +74,9 @@ class SixGuard():
                 msg = self.msg_queue.get()
                 if msg['level'] == 'EVENT' and self.event_handler != None:
                     self.event_handler.analyze(msg)
-                    self.attack_log.warning(self.format_msg(msg))
+                    self.log_dispatch(self.format_msg(msg))
                 else:
-                    self.attack_log.alert(self.format_msg(msg))
+                    self.log_dispatch(self.format_msg(msg))
             time.sleep(1)
             #TODO: use event to get notification.
     
