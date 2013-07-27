@@ -91,6 +91,7 @@ class Globalpot(threading.Thread):
             if check_extheader_order(pkt) == 1:
                 extheaders = [] #signature of extension headers
                 pkt = correct_abused_extheader(pkt, extheaders)
+                show_extheader_abuse_msg(pkt, extheaders)
         #if this pkt is a fragment, reassembly it
         if IPv6ExtHdrFragment in pkt:
             temp_pkt = None

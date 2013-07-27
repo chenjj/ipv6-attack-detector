@@ -5,22 +5,18 @@
 #IPv6 header, Hop-by-Hop Options header, Destination Options header, Routing header, Fragment header, Authentication header, Encapsulating Security Payload header, Destination Options header, Upper-layer header
 #Each extension header should occur at most once, except for the Destination Options header which should occur at most twice (once before a Routing header and once before the upper-layer header)[RFC 2460]
 def check_extheader_order(pkt):
+    '''check the order of extension headers'''
     #the below values are defined in RFC2460.
-    next_headers_vals = [0, 60, 43, 44, 51, 50, 60, 135, 59, 6, 17, 58]
-    pkt_index = 0
+    next_headers_vals = [0, 60, 43, 44, 51, 50, 60, 135, 59, 6, 17, 58, 0]
+    pkt_index = 1
     header_val_index = 0
-    while "IPv6ExtHdr" in pkt[pkt_index].summary() and header_val_index < 8:
+    while  "IPv6ExtHdr" in pkt[pkt_index].summary() and header_val_index < len(next_headers_vals):
         if pkt[pkt_index].nh == next_headers_vals[header_val_index]:
-            pkt_index=pkt_index + 1
+            pkt_index = pkt_index + 1
             header_val_index = header_val_index + 1
         else:
             header_val_index = header_val_index + 1
-    if header_val_index >=8 and "IPv6ExtHdr" in pkt[pkt_index].summary():
-        msg = self.msg.new_msg(pkt, save_pcap = 0)
-        msg['type'] = "Invalid Extension Header"
-        msg['name'] = "Invalid Extension Header in packets"
-        msg['util'] = "Crafting malformed Packets"
-        self.msg.put_event(msg)
+    if header_val_index >11 and "IPv6ExtHdr" in pkt[pkt_index].summary():
         return 1
     return 0
 
@@ -51,3 +47,13 @@ def correct_abused_extheader(pkt, extheaders):
         temp_pkt = temp_pkt.__class__(str(temp_pkt))
     pkt = temp_pkt
     return pkt
+
+def show_extheader_abuse_msg(self, pkt, extheaders):
+    '''show the msg about extension header abuse'''
+    msg = self.msg.new_msg(pkt, save_pcap = 0)
+    msg['type'] = "Invalid Extension Header"
+    msg['name'] = "Invalid Extension Header in packets"
+    msg['util'] = "Crafting malformed Packets"
+    msg['headers'] = extheaders
+    self.msg.put_event(msg)
+    return
