@@ -19,6 +19,10 @@ def check_extheader_order(pkt):
             header_val_index = header_val_index + 1
         else:
             header_val_index = header_val_index + 1
+        try:
+            pkt[pkt_index].summary()
+        except:
+            return -1
     if header_val_index >11 and "IPv6ExtHdr" in pkt[pkt_index].summary():
         return 1
     return 0

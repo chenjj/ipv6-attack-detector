@@ -76,7 +76,6 @@ class SixGuard():
                 msg = self.msg_queue.get()
                 if msg['level'] == 'EVENT' and self.event_handler != None:
                     self.event_handler.analyze(msg)
-                    print msg
                     self.log_dispatch(msg)
                 else:
                     self.log_dispatch(msg)
