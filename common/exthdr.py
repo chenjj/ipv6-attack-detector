@@ -13,7 +13,7 @@ def check_extheader_order(pkt):
     next_headers_vals = [0, 60, 43, 44, 51, 50, 60, 135, 59, 6, 17, 58, 0]
     pkt_index = 1
     header_val_index = 0
-    while  isinstance(pkt[pkt_index],_IPv6ExtHdr) and header_val_index < len(next_headers_vals):
+    while  "IPv6ExtHdr" in pkt[pkt_index].summary() and header_val_index < len(next_headers_vals):
         if pkt[pkt_index].nh == next_headers_vals[header_val_index]:
             pkt_index = pkt_index + 1
             header_val_index = header_val_index + 1
