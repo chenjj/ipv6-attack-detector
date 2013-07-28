@@ -11,6 +11,7 @@ from common.common import *
 from common import event
 from common.textlog import *
 from common.hpfeedslog import HpfeedsDBLogger
+from common.mongodblog import MongoDBLogger
 
 conf_dir = "./conf"
 log_dir = "./log"
@@ -33,7 +34,8 @@ class SixGuard():
             hpfeeds = HpfeedsDBLogger(conf_parser)
             self.dbloggers.append(hpfeeds)
         if self.options["mongodb"] == "True":
-            pass
+            mongodb = MongoDBLogger(conf_parser)
+            self.dbloggers.append(mongodb)
         if self.options["textlog"] == "True":
             textlog = TextDBLogger(conf_parser)
             self.dbloggers.append(textlog)        
