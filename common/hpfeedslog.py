@@ -178,7 +178,7 @@ class HpfeedsDBLogger(dblog.DBLogger):
         self.handler =  new(str(self.host), int(self.port), str(self.ident), str(self.secret))
     
     def write(self, msg):
-        self.handler.publish(self.channel, msg)
+        self.handler.publish(self.channel, str(msg))
 
     def close(self):
         self.handler.close()
