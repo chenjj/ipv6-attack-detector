@@ -11,6 +11,7 @@ import logger
 from common import *
 import message
 from exthdr import *
+from defrag6 import *
 
 # The class Honeypot emultates an IPv6 host.
 # TODO: Generate MAC address with specified vendor (or prefix).
@@ -116,6 +117,21 @@ class Honeypot(threading.Thread):
             return
         if self.pre_attack_detector(pkt) != 0:
             return
+        #if the pkt has extension headers, check it
+        if "IPv6ExtHdr" in pkt.summary():
+            if check_extheader_order(pkt) == 1:
+                extheaders = [] #signature of extension headers
+                pkt = correct_abused_extheader(pkt, extheaders)
+                self.show_extheader_abuse_msg(pkt, extheaders)
+        #if this pkt is a fragment, reassembly it
+        if IPv6ExtHdrFragment in pkt:
+            temp_pkt = None
+            defrag = Frag6Reassembly(self.msg)
+            temp_pkt = defrag.Frag6Defrag(pkt)
+            if temp_pkt == None:
+                return
+            else:
+                pkt = temp_pkt
         # Check spoofing.
         if self.check_received(pkt) != 0:
             return
@@ -147,6 +163,16 @@ class Honeypot(threading.Thread):
             return 1
         return 0
     
+    def show_extheader_abuse_msg(self, pkt, extheaders):
+        '''show the msg about extension header abuse'''
+        msg = self.msg.new_msg(pkt, save_pcap = 1)
+        msg['type'] = "Invalid Extension Header"
+        msg['name'] = "Invalid Extension Header in packets"
+        msg['util'] = "Crafting malformed Packets"
+        msg['headers'] = extheaders
+        self.msg.put_event(msg)
+        return
+
     # Check up the recevied packets.
     # ret: 0: normal packets, need further processing.
     # ret: 1: sent by itself, just ignore the packets.
