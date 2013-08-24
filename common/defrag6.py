@@ -64,7 +64,7 @@ class Frag6Reassembly:
     def Frag6CheckTTL(self, pkt, frag_tracker):
         """Check the TTL value of each fragment"""
         if pkt[IPv6].hlim < frag_context.min_ttl:
-            msg = self.msg.new_msg(pkt, save_pcap = 0)
+            msg = self.msg.new_msg(pkt , save_pcap = 1)
             msg['type'] = "Invalid Fragment"
             msg['name'] = "Small TTL in Fragment"
             msg['util'] = "THC-IPv6-fragmentation6, Crafting malformed Packets"
@@ -76,7 +76,7 @@ class Frag6Reassembly:
         """Check the size of fragment"""
         #if the none-last fragment is smaller than (1280-48) bytes, record it
         if len(pkt[IPv6ExtHdrFragment].payload) < frag_context.min_frag_len and frag_tracker.frag_flag & FRAG_GOT_LAST == 0:
-            msg = self.msg.new_msg(pkt, save_pcap = 0)
+            msg = self.msg.new_msg(pkt , save_pcap = 1)
             msg['type'] = "Invalid Fragment"
             msg['name'] = "Tiny Fragment"
             msg['util'] = "THC-IPv6-fragmentation6, Crafting malformed Packets"
@@ -108,7 +108,7 @@ class Frag6Reassembly:
 
     def Frag6Timeout(self, pkt, frag_tracker, frag_key):
         """Record timeout message and delete the tracker"""
-        msg = self.msg.new_msg(pkt, save_pcap = 0)
+        msg = self.msg.new_msg(pkt, save_pcap = 1)
         msg['type'] = "Invalid Fragment"
         msg['name'] = "Timeout Fragment"
         msg['util'] = "THC-IPv6-fragmentation6, Crafting malformed Packets"
@@ -177,7 +177,7 @@ class Frag6Reassembly:
             if pkt[IPv6ExtHdrFragment].m == 0:
                 frag_tracker.calc_size = pkt[IPv6ExtHdrFragment].offset*8 + len(pkt[IPv6ExtHdrFragment].payload)
                 if frag_tracker.calc_size > IP6_MAXPACKET:
-                    msg = self.msg.new_msg(pkt, save_pcap = 0)
+                    msg = self.msg.new_msg(frag_tracker.frags, save_pcap = 1)
                     msg['type'] = "Invalid Fragment"
                     msg['name'] = "Too big reasssembled Packet"
                     msg['util'] = "THC-IPv6-fragmentation6, Crafting malformed Packets"
@@ -222,7 +222,7 @@ class Frag6Reassembly:
                     pkt[IPv6ExtHdrFragment].payload = str(temp_pkt[IPv6ExtHdrFragment].payload)[:0-overlap]
                     pkt[IPv6ExtHdrFragment].underlayer.plen = temp_pkt[IPv6ExtHdrFragment].underlayer.plen - overlap
         if isoverlap == 1:
-            msg = self.msg.new_msg(pkt, save_pcap = 0)
+            msg = self.msg.new_msg(frag_tracker.frags, save_pcap = 1)
             msg['type'] = "Invalid Fragment"
             msg['name'] = "Overlapping Fragment"
             msg['util'] = "THC-IPv6-fragmentation6, Crafting malformed Packets"

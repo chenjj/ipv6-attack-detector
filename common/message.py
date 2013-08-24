@@ -1,4 +1,6 @@
 import os
+from scapy.all import *
+import hashlib
 import md5
 import struct
 import copy
@@ -86,12 +88,31 @@ class Message():
             pcap_file.close()
         return filename
         
+    def save_pcaps(self, attack, pkts):
+        pkt_str = ""
+        if isinstance(pkts , list):
+            for pkt in pkts:
+                pkt_str += str(pkt)
+        else:
+            pkt_str = str(pkts)
+        hash_str = hashlib.md5(pkt_str).hexdigest()
+        location = './pcap/' + hash_str + ".pcap"
+        if not os.path.isfile(location):
+            wrpcap(location , pkts)
+        return hash_str + ".pcap"
+
         # Build a new attack/event message entity.
     def new_msg(self, pkt, save_pcap = 1):
         msg = self.msg_templete.copy()
-        msg['timestamp'] = pkt.time
+        if isinstance(pkt , list):
+            if len(pkt) >0:
+                msg['timestamp'] = pkt[0].time
+            else:
+                msg['timestamp'] = ''
+        else:
+            msg['timestamp'] = pkt.time
         if save_pcap == 1:
-            msg['pcap'] = self.save_pcap(msg, pkt)
+            msg['pcap'] = self.save_pcaps(msg, pkt)
         else:
             msg['pcap'] = 'None'
         return msg

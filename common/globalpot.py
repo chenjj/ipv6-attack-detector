@@ -115,7 +115,7 @@ class Globalpot(threading.Thread):
 
     def show_extheader_abuse_msg(self, pkt, extheaders):
         '''show the msg about extension header abuse'''
-        msg = self.msg.new_msg(pkt, save_pcap = 0)
+        msg = self.msg.new_msg(pkt, save_pcap = 1)
         msg['type'] = "Invalid Extension Header"
         msg['name'] = "Invalid Extension Header in packets"
         msg['util'] = "Crafting malformed Packets"
