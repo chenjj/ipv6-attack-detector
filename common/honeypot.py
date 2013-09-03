@@ -56,7 +56,7 @@ class Honeypot(threading.Thread):
         self.solicited_targets = {}
         # {target_ip6:(mac)}
         self.ip6_neigh = {}
-    
+
     def __init__(self, config, msg_queue):
         threading.Thread.__init__(self)
         conf.verb = 0
@@ -110,11 +110,12 @@ class Honeypot(threading.Thread):
         ip6_filter = "ip6 and not tcp and not udp"
         ip6_lfilter = lambda (r): IPv6 in r and TCP not in r and UDP not in r and r[IPv6].dst in self.dst_addrs
         
-        sniff(iface=self.iface, filter=ip6_filter, lfilter=ip6_lfilter, prn=self.process, stop_filter=self.stop_sniff, timeout=1)
+        sniff(iface=self.iface, filter=ip6_filter, lfilter=ip6_lfilter, prn=self.process)
     
     def process(self, pkt):
         if self.stop == True:
             return
+        self.check_denial(pkt)
         if self.pre_attack_detector(pkt) != 0:
             return
         #if the pkt has extension headers, check it
@@ -241,6 +242,39 @@ class Honeypot(threading.Thread):
             return 1
         check_extheader_order(pkt)
         return 0
+
+    def check_denial(self, pkt):
+        if IPv6ExtHdrHopByHop in pkt:
+            if RouterAlert in pkt[IPv6ExtHdrHopByHop]:
+                unkown_opt_count = 0 
+                for item in pkt[IPv6ExtHdrHopByHop].options:
+                    if HBHOptUnknown in item:
+                        unkown_opt_count += 1
+                    if unkown_opt_count > 10: 
+                        msg = self.msg.new_msg(pkt, save_pcap = 1)
+                        msg['level'] = "ATTACK"
+                        msg['type'] = "Denial Of Service Attacks"
+                        msg['name'] = "large hop-by-hop header with router-alert and filled with unknown options"
+                        msg['util'] = "THC-IPv6:denial6"
+                        msg['attacker'] = pkt[IPv6].src
+                        msg['attacker_mac'] = pkt[Ether].src
+                        self.msg.put_attack(msg)
+                        return
+        if IPv6ExtHdrDestOpt in pkt:
+            unkown_opt_count = 0 
+            for item in pkt[IPv6ExtHdrDestOpt].options:
+                if HBHOptUnknown in item or Pad1 in item:
+                    unkown_opt_count += 1
+                if unkown_opt_count > 10: 
+                    msg = self.msg.new_msg(pkt, save_pcap = 1)
+                    msg['level'] = "ATTACK"
+                    msg['type'] = "Denial Of Service Attacks"
+                    msg['name'] = "large destination header filled with unknown options"
+                    msg['util'] = "THC-IPv6:denial6"
+                    msg['attacker'] = pkt[IPv6].src
+                    msg['attacker_mac'] = pkt[Ether].src
+                    self.msg.put_attack(msg)
+                    return
 
     # Handle the IPv6 invalid extention header options. (One of Nmap's host discovery technique.)
     # ret: 0: Valid extension header, need further processing.

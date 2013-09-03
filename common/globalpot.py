@@ -42,7 +42,6 @@ class Globalpot(threading.Thread):
         self.flood_dhcpc_flag = False
         self.dhcpc_counter = {} # {timestamp: counter}
         
-        
     def ra_init(self):
         filename = "globalpot_genuine_ra.pcap"
         location = './conf/' + filename
@@ -92,6 +91,7 @@ class Globalpot(threading.Thread):
                 extheaders = [] #signature of extension headers
                 pkt = correct_abused_extheader(pkt, extheaders)
                 self.show_extheader_abuse_msg(pkt, extheaders)
+            self.check_denial(pkt)
         #if this pkt is a fragment, reassembly it
         if IPv6ExtHdrFragment in pkt:
             temp_pkt = None
@@ -122,6 +122,39 @@ class Globalpot(threading.Thread):
         msg['headers'] = extheaders
         self.msg.put_event(msg)
         return
+
+    def check_denial(self, pkt):
+        if IPv6ExtHdrHopByHop in pkt:
+            if RouterAlert in pkt[IPv6ExtHdrHopByHop]:
+                unkown_opt_count = 0 
+                for item in pkt[IPv6ExtHdrHopByHop].options:
+                    if HBHOptUnknown in item:
+                        unkown_opt_count += 1
+                    if unkown_opt_count > 10: 
+                        msg = self.msg.new_msg(pkt, save_pcap = 1)
+                        msg['level'] = "ATTACK"
+                        msg['attacker'] = pkt[IPv6].src
+                        msg['attacker_mac'] = pkt[Ether].src
+                        msg['type'] = "Denial Of Service Attacks"
+                        msg['name'] = "large hop-by-hop header with router-alert and filled with unknown options"
+                        msg['util'] = "THC-IPv6:denial6"
+                        self.msg.put_attack(msg)
+                        return
+        if IPv6ExtHdrDestOpt in pkt:
+            unkown_opt_count = 0 
+            for item in pkt[IPv6ExtHdrDestOpt].options:
+                if HBHOptUnknown in item or Pad1 in item:
+                    unkown_opt_count += 1
+                if unkown_opt_count > 10: 
+                    msg = self.msg.new_msg(pkt, save_pcap = 1)
+                    msg['attacker'] = pkt[IPv6].src
+                    msg['attacker_mac'] = pkt[Ether].src
+                    msg['level'] = "ATTACK"
+                    msg['type'] = "Denial Of Service Attacks"
+                    msg['name'] = "large destination header filled with unknown options"
+                    msg['util'] = "THC-IPv6:denial6"
+                    self.msg.put_attack(msg)
+                    return
 
     # Handle the IPv6 invalid extention header options. (One of Nmap's host discovery technique.)
     
