@@ -357,7 +357,7 @@ class Honeypot(threading.Thread):
                     msg['attacker_mac'] = pkt[Ether].src
                     msg['target'] = pkt[ICMPv6ND_NA].tgt
                     msg['lladdr'] = pkt[ICMPv6NDOptDstLLAddr].lladdr
-                    msg['util'] = "THC-IPv6: fake_advertise6"
+                    msg['util'] = "THC-IPv6: fake_advertise6;Evil Foca: Neighbor Advertisement Spoofing"
                     self.msg.put_attack(msg)
             
         # Unexpected Neighbour Solicitation
@@ -431,6 +431,12 @@ class Honeypot(threading.Thread):
             log_msg += "No Prefix or SrcLLAddr, ignored."
             self.log.debug(log_msg)
             return
+        if ICMPv6NDOptMTU not in ra and ICMPv6NDOptRouteInfo not in ra and ra[ICMPv6NDOptPrefixInfo].validlifetime < 100:
+            msg = self.msg.new_msg(ra, save_pcap = 1)
+            msg['type'] = "SLAAC attack"
+            msg['name'] = "SLAAC Mitm attack"
+            msg['util'] = "Evil Foca: SLAACv6 attack"
+            self.msg.put_attack(msg)
         prefix = ra[ICMPv6NDOptPrefixInfo].prefix
         prefix_len = ra[ICMPv6NDOptPrefixInfo].prefixlen
         valid_lifetime = ra[ICMPv6NDOptPrefixInfo].validlifetime
