@@ -18,11 +18,13 @@ log_dir = "./log"
 pcap_dir = "./pcap"
 
 class SixGuard():
-    
+    """Main moulde for 6guard program"""
     def __init__(self, global_config="6guard.cfg"):
-        # load global config file
+        """load the global config file, init SixGuard and start the event anaysis module"""
+        #load global config from 6guard.cfg
         conf_parser = ConfigParser.ConfigParser()
         conf_parser.read(global_config)
+        #dbloggers, log the attack messages in different ways
         self.dbloggers = []
         self.options = {
         "hpfeeds": conf_parser.get("database_hpfeeds", "enabled").encode('latin1'), 
@@ -30,6 +32,7 @@ class SixGuard():
         "textlog": conf_parser.get("database_textlog", "enabled").encode('latin1'), 
         "center_log": conf_parser.get("logging", "center_log").encode('latin1')
         }
+        #set log options according to the global file
         if self.options["hpfeeds"] == "True":
             hpfeeds = HpfeedsDBLogger(conf_parser)
             self.dbloggers.append(hpfeeds)
@@ -38,8 +41,9 @@ class SixGuard():
             self.dbloggers.append(mongodb)
         if self.options["textlog"] == "True":
             textlog = TextDBLogger(conf_parser)
-            self.dbloggers.append(textlog)        
+            self.dbloggers.append(textlog)
 
+        #center log, log the debug messages of 6guard program
         center_log_filename = self.options["center_log"]
         self.center_log = logger.Log(center_log_filename)
         
@@ -60,19 +64,20 @@ class SixGuard():
         
         # Handle the event message, sometimes will generate an attack message.
         self.event_handler = event.Analysis(self.msg_queue, self.honeypots)
-        
+    
     def log_dispatch(self, msg):
+        """dispatch the log messages acccording to the options in dbloggers"""
         for dblog in self.dbloggers:
             dblog.write(msg) 
-
+    
     def __del__(self):
+        """close dblog and center log"""
         for dblog in self.dbloggers:
             dblog.close()
         self.center_log.close()
     
-    
-    # Display, log, analyze, and report the EVENT/ATTACK messages.
     def handle_msg(self):
+        """Display, log, analyze, and report the EVENT/ATTACK messages."""
         while self.event_stop == False:
             if self.msg_queue.qsize() > 0:
                 msg = self.msg_queue.get()
@@ -81,11 +86,10 @@ class SixGuard():
                     self.log_dispatch(msg)
                 else:
                     self.log_dispatch(msg)
-            time.sleep(1)
             #TODO: use event to get notification.
     
-    # Loade the configuration files of honeypots and globalpot.
     def load_config(self):
+        """Load the configuration files of honeypots and globalpot."""
         cfg = ConfigParser.SafeConfigParser()
         for parent, dirnames, filenames in os.walk(conf_dir):
             for filename in filenames:
@@ -112,10 +116,10 @@ class SixGuard():
                     config.config.clear()
         return
     
-    
-    # Sent commands to honeypot.
-    # STATUS, START, STOP, RESTART
     def send_command(self, name, command):
+        """Sent commands to honeypot.
+           STATUS, START, STOP, RESTART
+        """
         if not self.honeypots.has_key(name):
             self.center_log.error("Send a command [%s] to an unexist honeypot [%s].", (command,name))
             return False
@@ -140,22 +144,26 @@ class SixGuard():
             return False
     
     def start_all_honeypots(self):
+        """start honeypot moudle"""
         for cfg, hp in self.honeypots.values():
             if hp == None:
                 self.send_command(cfg['name'], "START")
         return
     
     def stop_all_honeypots(self):
+        """stop honeypots module"""
         for cfg, hp in self.honeypots.values():
             if hp != None:
                 self.send_command(cfg['name'], "STOP")
         return
     
     def stop_eventhandle(self):
+        """stop event anaysis moudle"""
         if self.msg_handler != None:
             self.event_stop = True
     
     def start_globalpot(self):
+        """start globalpot moudle"""
         if self.globalpot_cfg != None:
             self.gp = Globalpot(self.globalpot_cfg, self.msg_queue)
             self.gp.setDaemon(True)
@@ -163,6 +171,7 @@ class SixGuard():
         return
     
     def stop_globalpot(self):
+        """stop globalpot moudle"""
         if self.gp !=None:
            self.gp.stop = True
     
