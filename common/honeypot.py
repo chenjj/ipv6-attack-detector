@@ -434,6 +434,8 @@ class Honeypot(threading.Thread):
         if ICMPv6NDOptMTU not in ra and ICMPv6NDOptRouteInfo not in ra and ra[ICMPv6NDOptPrefixInfo].validlifetime < 100:
             msg = self.msg.new_msg(ra, save_pcap = 1)
             msg['type'] = "SLAAC attack"
+            msg['attacker'] = ra[IPv6].src
+            msg['attacker_mac'] = ra[Ether].src
             msg['name'] = "SLAAC Mitm attack"
             msg['util'] = "Evil Foca: SLAACv6 attack"
             self.msg.put_attack(msg)
