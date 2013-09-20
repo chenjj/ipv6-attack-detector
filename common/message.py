@@ -8,7 +8,7 @@ import copy
 class Message():
     """Class message to pack different attack and event messages"""
     def __get_pcap_hdr(self):
-    """The format of pcap file references to http://wiki.wireshark.org/Development/LibpcapFileFormat/#Libpcap_File_Format"""
+        """The format of pcap file references to http://wiki.wireshark.org/Development/LibpcapFileFormat/#Libpcap_File_Format"""
         #32bits
         magic_number = 0xa1b2c3d4
         #16bits
