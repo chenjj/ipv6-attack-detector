@@ -13,12 +13,12 @@ import message
 from exthdr import *
 from defrag6 import *
 
-# The class Honeypot emultates an IPv6 host.
+
 # TODO: Generate MAC address with specified vendor (or prefix).
 class Honeypot(threading.Thread):
-
-    # Initiating variables.
+    """The class Honeypot emultates an IPv6 host."""
     def __init_variable(self):
+        """Initiating variables."""
         # TODO: Stop the honeypot at any time. (By disabling all the configurable options.)
         # Stop flag
         self.stop = False
@@ -58,6 +58,7 @@ class Honeypot(threading.Thread):
         self.ip6_neigh = {}
 
     def __init__(self, config, msg_queue):
+        """Init Honeypot module"""
         threading.Thread.__init__(self)
         conf.verb = 0
         
@@ -109,13 +110,16 @@ class Honeypot(threading.Thread):
         
         ip6_filter = "ip6 and not tcp and not udp"
         ip6_lfilter = lambda (r): IPv6 in r and TCP not in r and UDP not in r and r[IPv6].dst in self.dst_addrs
-        
+        #sniff pkts sent to honeypots
         sniff(iface=self.iface, filter=ip6_filter, lfilter=ip6_lfilter, prn=self.process)
     
     def process(self, pkt):
+        """Process pkts which is sent to honeypots"""
         if self.stop == True:
             return
+        #check denial of service attack initialed by denial6
         self.check_denial(pkt)
+        #detect sendpees6 attack 
         if self.pre_attack_detector(pkt) != 0:
             return
         #if the pkt has extension headers, check it
@@ -151,8 +155,8 @@ class Honeypot(threading.Thread):
             self.handle_attack(pkt)
         return
     
-    # Check the attacking traffic before honeypot really handling it.
     def pre_attack_detector(self, pkt):
+        """Check the attacking traffic before honeypot really handling it."""
         # THC-IPv6: sendpees6
         if pkt.haslayer(ICMPv6ND_NS) and pkt.haslayer(ICMPv6NDOptSrcLLAddr) and pkt.haslayer(Raw) and len(pkt[Raw]) > 150:
             msg = self.msg.new_msg(pkt)
@@ -160,12 +164,11 @@ class Honeypot(threading.Thread):
             msg['name'] = "Flood SEND NS"
             msg['util'] = "THC-IPv6: sendpees6"
             self.msg.put_attack(msg)
-            print "attack"
             return 1
         return 0
     
     def show_extheader_abuse_msg(self, pkt, extheaders):
-        '''show the msg about extension header abuse'''
+        """show the msg about extension header abuse"""
         msg = self.msg.new_msg(pkt, save_pcap = 1)
         msg['type'] = "Invalid Extension Header"
         msg['name'] = "Invalid Extension Header in packets"
@@ -174,12 +177,14 @@ class Honeypot(threading.Thread):
         self.msg.put_event(msg)
         return
 
-    # Check up the recevied packets.
-    # ret: 0: normal packets, need further processing.
-    # ret: 1: sent by itself, just ignore the packets.
-    # ret: 2: spoofing alert.
-    # ret: 3: irrelevant packts.
     def check_received(self, packet):
+        """
+        Check up the recevied packets.
+        ret: 0: normal packets, need further processing.
+        ret: 1: sent by itself, just ignore the packets.
+        ret: 2: spoofing alert.
+        ret: 3: irrelevant packts.
+        """
         sig = binascii.b2a_hex(str(packet))
         #print "received:"
         #print sig
@@ -220,8 +225,8 @@ class Honeypot(threading.Thread):
             return 3
         return 0
 
-    # Record the packet in self.sent_sigs{}, then send it to the pre-specified interface.
     def send_packet(self, packet):
+        """Record the packet in self.sent_sigs{}, then send it to the pre-specified interface."""
         #sig = str(packet)
         sig = binascii.b2a_hex(str(packet))
         #print sig
@@ -236,14 +241,19 @@ class Honeypot(threading.Thread):
         # The packet summary infomation is just enough.
         #self.log.debug("Packet hex: %s" % sig)
          
-    #Check the extension header
     def do_invalid_exthdr(self, pkt):
+        """Check the extension header"""
         if self.check_host_discovery_bynmap(pkt) == 1:
             return 1
         check_extheader_order(pkt)
         return 0
 
     def check_denial(self, pkt):
+        """
+        Detect the denial attack initialed by denial6 in THC-IPv6 suit.
+        There are two kinds of deinal attacks in denial6. large hop-by-hop header with router-alert and filled with unknown options,  large destination header filled with unknown options
+        """
+        #detect the first  attack, if the pkt has a hop-by-hop header with a router alert, and the header has more than 10 unknow options, the 6guard log this attack
         if IPv6ExtHdrHopByHop in pkt:
             if RouterAlert in pkt[IPv6ExtHdrHopByHop]:
                 unkown_opt_count = 0 
@@ -260,6 +270,7 @@ class Honeypot(threading.Thread):
                         msg['attacker_mac'] = pkt[Ether].src
                         self.msg.put_attack(msg)
                         return
+        #detect the second attack, if the pkt has a destination header and this header has more than 10 unknow options, 6guard log this attack msg
         if IPv6ExtHdrDestOpt in pkt:
             unkown_opt_count = 0 
             for item in pkt[IPv6ExtHdrDestOpt].options:
@@ -276,18 +287,20 @@ class Honeypot(threading.Thread):
                     self.msg.put_attack(msg)
                     return
 
-    # Handle the IPv6 invalid extention header options. (One of Nmap's host discovery technique.)
-    # ret: 0: Valid extension header, need further processing.
-    # ret: 1: Invalid extension header, reply a parameter problem message.
-    # The allocated option types are listd in http://www.iana.org/assignments/ipv6-parameters/.
-    # When receives a packet with unrecognizable options of destination extension header or hop-by-hop extension header, the IPv6 node should reply a Parameter Problem message.
-    # RFC 2460, section 4.2 defines the TLV format of options headers, and the actions that will be take when received a unrecognizable option.
-    # The action depends on the highest-order two bits:
-    # 11 - discard the packet and, only if the packet's dst addr was not a multicast address, send ICMP Parameter Problem, Code 2, message to the src addr.
-    # 10 - discard the packet and, regardless of whether or not the packet's dstaddr was a multicast address, send an parameter problem message.
     def check_host_discovery_bynmap(self, pkt):
-        # known_option_types = (0x0,0x1,0xc2,0xc3,0x4,0x5,0x26,0x7,0x8,0xc9,0x8a,0x1e,0x3e,0x5e,0x63,0x7e,0x9e,0xbe,0xde,0xfe)
-        # Use the known list of Scapy's parser.
+        """
+        Handle the IPv6 invalid extention header options. (One of Nmap's host discovery technique.)
+        ret: 0: Valid extension header, need further processing.
+        ret: 1: Invalid extension header, reply a parameter problem message.
+        The allocated option types are listd in http://www.iana.org/assignments/ipv6-parameters/.
+        When receives a packet with unrecognizable options of destination extension header or hop-by-hop extension header, the IPv6 node should reply a Parameter Problem message.
+        RFC 2460, section 4.2 defines the TLV format of options headers, and the actions that will be take when received a unrecognizable option.
+        The action depends on the highest-order two bits:
+        11 - discard the packet and, only if the packet's dst addr was not a multicast address, send ICMP Parameter Problem, Code 2, message to the src addr.
+        10 - discard the packet and, regardless of whether or not the packet's dstaddr was a multicast address, send an parameter problem message.
+        known_option_types = (0x0,0x1,0xc2,0xc3,0x4,0x5,0x26,0x7,0x8,0xc9,0x8a,0x1e,0x3e,0x5e,0x63,0x7e,0x9e,0xbe,0xde,0xfe)
+        Use the known list of Scapy's parser.
+        """
         if HBHOptUnknown not in pkt:
             return 0
         else:
@@ -305,8 +318,8 @@ class Honeypot(threading.Thread):
             self.send_packet(reply)
             return 1
     
-    # Handle the received NDP packets.
     def do_NDP(self, pkt):
+        """Handle the received NDP packets."""
         if pkt[IPv6].dst not in self.dst_addrs:
             return
             
@@ -390,8 +403,8 @@ class Honeypot(threading.Thread):
                     self.send_packet(reply)
         self.log.debug(log_msg)
 
-    # Handle the received ICMPv6 Echo packets.
     def do_ICMPv6Echo(self, req):
+        """Handle the received ICMPv6 Echo packets."""
         #print "do_ICMPv6Echo(), receved: "
         #print req.summary
         if req[IPv6].dst != "ff02::1":
@@ -426,11 +439,13 @@ class Honeypot(threading.Thread):
         return
         
     def do_slaac(self, ra):
+        """Detect the SLAAC attack, the key point of the SLAAC attack detection is to detect the Fake Router Advertisement initialed by the attack tool"""
         log_msg = "Router Advertisement received.\n"
         if ICMPv6NDOptPrefixInfo not in ra or ICMPv6NDOptSrcLLAddr not in ra:
             log_msg += "No Prefix or SrcLLAddr, ignored."
             self.log.debug(log_msg)
             return
+        #To simplfy it ,we use signature to detect different kind of fake RA. The Fake Router Advertisement initialed by Evil Foca doesn't have MTU options and RouterInfo Options and its validlifetime is less than 100
         if ICMPv6NDOptMTU not in ra and ICMPv6NDOptRouteInfo not in ra and ra[ICMPv6NDOptPrefixInfo].validlifetime < 100:
             msg = self.msg.new_msg(ra, save_pcap = 1)
             msg['type'] = "SLAAC attack"
@@ -479,8 +494,8 @@ class Honeypot(threading.Thread):
             self.log.debug(log_msg)
         # self.do_NDP() will handle the 'else'
     
-    # Add a unicast address to the honeypot.
     def add_addr(self, new_addr, prefix_len, time_list):
+        """Add a unicast address to the honeypot."""
         if self.unicast_addrs.has_key(new_addr):
             log_msg = "Address [%s] already exists on the interface." % new_addr
             self.log.info(log_msg)
@@ -499,6 +514,7 @@ class Honeypot(threading.Thread):
         return
         
     def update_addr(self, addr, time_list):
+        """Update unicast address to the honeypot."""
         if not self.unicast_addrs.has_key(addr):
             return
         timestamp, valid_lifetime, preferred_lifetime = time_list
@@ -515,6 +531,7 @@ class Honeypot(threading.Thread):
         self.log.info(log_msg)
         
     def del_addr(self, addr):
+        """Delete unicast address to the honeypot."""
         if self.unicast_addrs.has_key(addr):
             del self.unicast_addrs[addr]
         if self.src_addrs.count(addr) != 0:
@@ -528,8 +545,8 @@ class Honeypot(threading.Thread):
             log_msg = "Deleted an address: [%s]" % addr
         self.log.info(log_msg)
     
-    # Generate a new IPv6 unicast address like [Prefix + interface identifier]/Prefixlen.
     def prefix2addr(self, prefix, prefix_len):
+        """Generate a new IPv6 unicast address like [Prefix + interface identifier]/Prefixlen."""
         # Section 5.5.3 of RFC 4862: 
         # If the sum of the prefix length and interface identifier length
         # does not equal 128 bits, the Prefix Information option MUST be
@@ -547,9 +564,12 @@ class Honeypot(threading.Thread):
         new_addr = inet_ntop6(new_addr_n)
         return new_addr
     
-    # Send Neighbour Solicitation packets.
-    # TODO: How to select a source IPv6 address? It's a problem.
+
     def send_NDP_NS(self, target, dad_flag=False):
+        """
+        Send Neighbour Solicitation packets.
+        TODO: How to select a source IPv6 address? It's a problem.
+        """
         self.solicited_targets[target] = (dad_flag, 0)
         
         target_n = inet_pton6(target)
@@ -585,7 +605,7 @@ class Honeypot(threading.Thread):
         return
         
     def handle_attack(self, pkt):
-        # redir6 attack
+        """Detect redir6 attack"""
         if ICMPv6ND_Redirect in pkt:
             msg = self.msg.new_msg(pkt)
             msg['type'] = 'MitM | DoS'
