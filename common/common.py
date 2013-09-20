@@ -37,8 +37,8 @@ def mac2vendor(mac):
     else:
         return None
 
-# Return a random mac address with specified prefix.
 def prefix2mac(prefix):
+    """Return a random mac address with specified prefix."""
     hex_str = "0123456789ABCDEF"
     mac = ""
     for i in range(0, 6, 2):
@@ -55,10 +55,8 @@ def vendor2mac(vendor):
     prefix = random.choice(oui_rdict[vendor])
     return prefix2mac(prefix)
 
-# interactive mode of vendor2mac()
-# When quantity==1, return a mac; 
-# When quantity>1, return a mac list.
 def vendor2mac_ia(keyword, quantity = 1):
+    """interactive mode of vendor2mac(). When quantity==1, return a mac; When quantity>1, return a mac list."""
     pattern = r'\b%s\b' % keyword
     can_list = []
     mac_list = []
@@ -95,8 +93,8 @@ def vendor2mac_ia(keyword, quantity = 1):
     
     return mac_list
 
-# Verify the checksum of packets.
 def verify_cksum(pkt):
+    """Verify the checksum of packets."""
     # Scapy uses 'cksum' or 'chksum' to index checksum value.
     try:
         origin_cksum = pkt.cksum
