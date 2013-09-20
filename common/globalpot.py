@@ -7,8 +7,9 @@ from defrag6 import *
 from exthdr import *
         
 class Globalpot(threading.Thread):
-    
+    """Globalpot module to detect the attacks which sent to the global network, inherits from Thread"""
     def __init__(self, cfg, msg_queue):
+        """Init the Globalpot module"""
         self.stop = True
         threading.Thread.__init__(self)
         self.iface = cfg['iface']
@@ -20,8 +21,8 @@ class Globalpot(threading.Thread):
         
         # RAguard is responsible for detecting fake_router6, flood_router6, kill_router6
         self.ras = {}
-        self.spoofing_ras = {} #{ra: counter}
-        self.spoofing_counter = {} # {timestamp: counter}
+        self.spoofing_ras = {}  #{ra: counter}
+        self.spoofing_counter = {}  # {timestamp: counter}
         
         self.genuine_ra = ""
         self.genuine_router_addr = ""
@@ -43,8 +44,10 @@ class Globalpot(threading.Thread):
         self.dhcpc_counter = {} # {timestamp: counter}
         
     def ra_init(self):
+        """Init genuine router advertisement, sniff one if it doesn't exist"""
         filename = "globalpot_genuine_ra.pcap"
         location = './conf/' + filename
+        #if the genuine router advertisement exists, parse and print it
         if os.path.isfile(location):
             pcap_file = rdpcap(location)
             pkt = pcap_file[0]
@@ -59,6 +62,7 @@ class Globalpot(threading.Thread):
             print "Have selected the saved Router Advertisement as the genuine one."
             self.print_ra(self.genuine_ra)
             return True
+        #if the genuine RA doesn't exist, sniff and select one
         ra_lfilter = lambda (r): IPv6 in r and ICMPv6ND_RA in r
         # Send a Router Solicitation to get all Router Advertisement messages.
         # In the future, it can call IPv6 honeypots to send RS message.
@@ -80,11 +84,11 @@ class Globalpot(threading.Thread):
         globalpot_lfilter = lambda (r): IPv6 in r and (r[IPv6].dst == 'ff02::1' or r[IPv6].dst == 'ff02::1:2')
         self.ra_init()
         print "Globalpot starts.\n"
+        #sniff the packet and call process function to handle it
         sniff(iface=self.iface, filter=globalpot_filter, lfilter = globalpot_lfilter, prn=self.process)
     
     def process(self, pkt):
-        #if self.pre_attack_detector(pkt) != 0:
-        #    return
+        """Process the pkt which is sent to globalpot"""
         #if the pkt has extension headers, check it
         if "IPv6ExtHdr" in pkt.summary():
             if check_extheader_order(pkt) == 1:
@@ -114,7 +118,7 @@ class Globalpot(threading.Thread):
             self.dhcpc_guard(pkt)
 
     def show_extheader_abuse_msg(self, pkt, extheaders):
-        '''show the msg about extension header abuse'''
+        '''Show the msg about extension header abuse'''
         msg = self.msg.new_msg(pkt, save_pcap = 1)
         msg['type'] = "Invalid Extension Header"
         msg['name'] = "Invalid Extension Header in packets"
@@ -124,6 +128,11 @@ class Globalpot(threading.Thread):
         return
 
     def check_denial(self, pkt):
+        """
+        Detect the denial attack initialed by denial6 in THC-IPv6 suit.
+        There are two kinds of deinal attacks in denial6. large hop-by-hop header with router-alert and filled with unknown options,  large destination header filled with unknown options
+        """
+        #detect the first  attack, if the pkt has a hop-by-hop header with a router alert, and the header has more than 10 unknow options, the 6guard log this attack
         if IPv6ExtHdrHopByHop in pkt:
             if RouterAlert in pkt[IPv6ExtHdrHopByHop]:
                 unkown_opt_count = 0 
@@ -140,6 +149,7 @@ class Globalpot(threading.Thread):
                         msg['util'] = "THC-IPv6:denial6"
                         self.msg.put_attack(msg)
                         return
+        #detect the second attack, if the pkt has a destination header and this header has more than 10 unknow options, 6guard log this attack msg
         if IPv6ExtHdrDestOpt in pkt:
             unkown_opt_count = 0 
             for item in pkt[IPv6ExtHdrDestOpt].options:
@@ -156,18 +166,18 @@ class Globalpot(threading.Thread):
                     self.msg.put_attack(msg)
                     return
 
-    # Handle the IPv6 invalid extention header options. (One of Nmap's host discovery technique.)
-    
     def host_discovery_guard(self, pkt):
-    
-        # known_option_types = (0x0,0x1,0xc2,0xc3,0x4,0x5,0x26,0x7,0x8,0xc9,0x8a,0x1e,0x3e,0x5e,0x63,0x7e,0x9e,0xbe,0xde,0xfe)
-        # Use the known list of Scapy's parser.
-        # The allocated option types are listd in http://www.iana.org/assignments/ipv6-parameters/.
-        # When receives a packet with unrecognizable options of destination extension header or hop-by-hop extension header, the IPv6 node should reply a Parameter Problem message.
-        # RFC 2460, section 4.2 defines the TLV format of options headers, and the actions that will be take when received a unrecognizable option.
-        # The action depends on the highest-order two bits:
-        # 11 - discard the packet and, only if the packet's dst addr was not a multicast address, send ICMP Parameter Problem, Code 2, message to the src addr.
-        # 10 - discard the packet and, regardless of whether or not the packet's dstaddr was a multicast address, send an parameter problem message.
+        """
+        Handle the IPv6 invalid extention header options. (One of Nmap's host discovery technique.)
+        known_option_types = (0x0,0x1,0xc2,0xc3,0x4,0x5,0x26,0x7,0x8,0xc9,0x8a,0x1e,0x3e,0x5e,0x63,0x7e,0x9e,0xbe,0xde,0xfe)
+        Use the known list of Scapy's parser.
+        The allocated option types are listd in http://www.iana.org/assignments/ipv6-parameters/.
+        When receives a packet with unrecognizable options of destination extension header or hop-by-hop extension header, the IPv6 node should reply a Parameter Problem message.
+        RFC 2460, section 4.2 defines the TLV format of options headers, and the actions that will be take when received a unrecognizable option.
+        The action depends on the highest-order two bits:
+        11 - discard the packet and, only if the packet's dst addr was not a multicast address, send ICMP Parameter Problem, Code 2, message to the src addr.
+        10 - discard the packet and, regardless of whether or not the packet's dstaddr was a multicast address, send an parameter problem message.
+        """
         if HBHOptUnknown in pkt:
             if (pkt[HBHOptUnknown].otype & 0xc0) == 0xc0: 
                 dst_type = in6_getAddrType(pkt[IPv6].dst)
@@ -195,7 +205,7 @@ class Globalpot(threading.Thread):
         self.flood_ns_flag = False
     
     def ns_guard(self, pkt):
-        # Responsible for detecting THC-IPv6: sendpeesmp6
+        """Check Neighbor Solicitation. Responsible for detecting THC-IPv6: flood_solicitate6, rsmurf6 and sendpeesmp6"""
         if ICMPv6NDOptSrcLLAddr in pkt:
             src_type = in6_getAddrType(pkt[IPv6].src)
             #IPV6_ADDR_LINKLOCAL
@@ -241,6 +251,7 @@ class Globalpot(threading.Thread):
         self.flood_na_flag = False
     
     def na_guard(self, pkt):
+        """Check Neighbor Advertisement. Responsible for detecting THC-IPv6:fake_advertise6 and flood_advertise6"""
         if ICMPv6NDOptDstLLAddr in pkt:
             src_type = in6_getAddrType(pkt[IPv6].src)
             #IPV6_ADDR_LINKLOCAL
@@ -286,6 +297,7 @@ class Globalpot(threading.Thread):
         self.flood_dhcpc_flag = False
     
     def dhcpc_guard(self, pkt):
+        """Check DHCP pkts. Responsible for detecting THC-IPv6:flood_dhcpc6"""
         # flood_dhcpc6
         # Ignore the details of fake DHCPCs while suffering flood NA attack.
         if self.flood_dhcpc_flag == True:
@@ -313,9 +325,11 @@ class Globalpot(threading.Thread):
             return 1
         return 0
     
-    # Sniff all RAs and write them in self.ras
-    # The structure of self.ras is,  {md5(ra): [ra, times]}
     def sniff_ra(self,pkt):
+        """
+        Sniff all RAs and write them in self.ras
+        The structure of self.ras is,  {md5(ra): [ra, times]}
+        """
         # Filter the malformed Router Advertisement.
         if not pkt.haslayer(ICMPv6NDOptSrcLLAddr):
             return
@@ -340,8 +354,8 @@ class Globalpot(threading.Thread):
         self.received_ra_flag = True
         return
     
-    # Select a geniune RA from sniffing result.
     def select_genuine_ra(self):
+        """Select a geniune RA from sniffing result."""
         if len(self.ras) == 1:
             self.genuine_ra_hash = self.ras.keys()[0]
             self.genuine_ra = self.ras[self.genuine_ra_hash][0]
@@ -368,8 +382,8 @@ class Globalpot(threading.Thread):
     def clear_flood_ra(self):
         self.flood_ra_flag = False
     
-    # If the received RA doesn't match with the self.genuine_ra, print Alert!
     def ra_guard(self, pkt):
+        """If the received RA doesn't match with the self.genuine_ra, print Alert!"""
         if pkt[ICMPv6ND_RA].routerlifetime == 0 and pkt.haslayer(ICMPv6NDOptPrefixInfo):
             # SLAAC for host discovery.
             msg = self.msg.new_msg(pkt)
@@ -450,10 +464,8 @@ class Globalpot(threading.Thread):
             else:
                 return
 
-
-
-    # Print Router Advertisement message in a readable form.
     def print_ra(self, ra):
+        """Print Router Advertisement message in a readable form."""
         print 'Stateful address conf.    : %d' % (ra.M)
         print 'Stateful other conf.      : %d' % (ra.O)
         print 'Router lifetime           : %d   \t(0x%.4x) seconds' % (ra.routerlifetime, ra.routerlifetime)
@@ -472,8 +484,8 @@ class Globalpot(threading.Thread):
                     % (ra.preferredlifetime, ra.preferredlifetime)
         print ""
 
-    # The format of pcap file references to http://wiki.wireshark.org/Development/LibpcapFileFormat/#Libpcap_File_Format
     def __get_pcap_hdr(self):
+        """The format of pcap file references to http://wiki.wireshark.org/Development/LibpcapFileFormat/#Libpcap_File_Format"""
         #32bits
         magic_number = 0xa1b2c3d4
         #16bits
@@ -502,6 +514,7 @@ class Globalpot(threading.Thread):
         return struct.pack('IIII', ts_sec, ts_usec, incl_len, orig_len)
         
     def save_pcap(self, pkt):
+        """Save the selected genuine RA"""
         #filename = "%s_%s.pcap" % (self.user, hash_str)
         filename = "globalpot_genuine_ra.pcap"
         location = './conf/' + filename
