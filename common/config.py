@@ -8,6 +8,7 @@ config = {
 }
 
 def parse_config(cfg):
+    """Parse config file"""
     values = {}
     
     if cfg.has_option('main', 'name'):

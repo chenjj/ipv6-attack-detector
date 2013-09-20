@@ -1,14 +1,15 @@
 from scapy.layers.inet6 import _IPv6ExtHdr
 from scapy.all import *
 
-#Check the order and count of extension header options
-#ret: 0: Valid extension header, do nothing
-#ret: 1: The order or count of extension header is invalid, log the event, 
-#When more than one extension header is used in the same packet, it is recommended that those headers appear in the following order[RFC 2460, 1998]:
-#IPv6 header, Hop-by-Hop Options header, Destination Options header, Routing header, Fragment header, Authentication header, Encapsulating Security Payload header, Destination Options header, Upper-layer header
-#Each extension header should occur at most once, except for the Destination Options header which should occur at most twice (once before a Routing header and once before the upper-layer header)[RFC 2460]
 def check_extheader_order(pkt):
-    '''check the order of extension headers'''
+    """
+    Check the order and count of extension header options
+    ret: 0: Valid extension header, do nothing
+    ret: 1: The order or count of extension header is invalid, log the event, 
+    When more than one extension header is used in the same packet, it is recommended that those headers appear in the following order[RFC 2460, 1998]:
+    IPv6 header, Hop-by-Hop Options header, Destination Options header, Routing header, Fragment header, Authentication header, Encapsulating Security Payload header, Destination Options header, Upper-layer header
+    Each extension header should occur at most once, except for the Destination Options header which should occur at most twice (once before a Routing header and once before the upper-layer header)[RFC 2460]
+    """
     #the below values are defined in RFC2460.
     next_headers_vals = [0, 60, 43, 44, 51, 50, 60, 135, 59, 6, 17, 58, 0]
     pkt_index = 1
@@ -28,7 +29,7 @@ def check_extheader_order(pkt):
     return 0
 
 def correct_abused_extheader(pkt, extheaders):
-    """try to correct the invalid extension headers, return corrected packet"""
+    """Try to correct the invalid extension headers, return corrected packet"""
     has_frag_header = 0
     pkt_index = 1
     before_frag_index = 0
