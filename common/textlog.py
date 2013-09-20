@@ -3,19 +3,24 @@ from common import *
 import time
 
 class TextDBLogger(dblog.DBLogger):
+    """Class TextDBLogger for logging attack message into file"""
     def start(self, cfg):
+        """Load config and open log file"""
         self.outfile = file(cfg.get('database_textlog', 'logfile'),'a')
 
     def write(self, msg):
+        """Write message to file"""
         msg_str = self.format_msg(msg)
         print msg_str
         self.outfile.write(msg_str)
         self.outfile.flush()
 
     def close(self):
+        """Close file handle"""
         self.outfile.close()
 
     def format_msg(self, msg):
+        """Format messages"""
         time_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(msg['timestamp']))
         
         msg_str = "\n[%s]\n" % msg['level']

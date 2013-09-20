@@ -1,6 +1,7 @@
 import time
 
 class Log:
+    """Class Log for logging debug message in 6guard program"""
     print_level = 0
     msg_level = {0: 'DEBUG', 1: 'INFO', 2: 'WARNING', 3: 'ALERT'}
     

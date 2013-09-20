@@ -1,3 +1,5 @@
+#this publish module mainly refer to https://github.com/rep/hpfeeds/blob/master/cli/hpfeeds-client by Mark
+
 import sys
 import struct
 import socket
@@ -168,7 +170,9 @@ def new(host=None, port=10000, ident=None, secret=None, timeout=3, reconnect=Tru
     return HPC(host, port, ident, secret, timeout, reconnect)
 
 class HpfeedsDBLogger(dblog.DBLogger):
+    """Class HpfeedsDBLogger.publish attack message using hpfeeds"""
     def start(self, config):
+        """Load config and connect to hpfeeds center"""
         print "connect to hpfeeds"
         self.host = config.get("database_hpfeeds","host")
         self.port = config.get("database_hpfeeds","port")
@@ -178,7 +182,9 @@ class HpfeedsDBLogger(dblog.DBLogger):
         self.handler =  new(str(self.host), int(self.port), str(self.ident), str(self.secret))
     
     def write(self, msg):
+        """Write message to hpfeeds channel"""
         self.handler.publish(self.channel, str(msg))
 
     def close(self):
+        """Close hpfeeds handle"""
         self.handler.close()
