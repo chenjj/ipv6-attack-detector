@@ -2,7 +2,7 @@ import threading, random, time
 import message
     
 class Analysis():
-
+    """Analyze the event msg and sometimes gnerate an attack msg"""
     def __init__(self, msg_queue, honeypots):
         self.msg_queue = msg_queue
         self.honeypots = honeypots
@@ -16,7 +16,7 @@ class Analysis():
         self.regular_ns_dad_timer = None
         
     def __del__(self):
-        # Cancel the timers.
+        """Cancel the timers."""
         if self.regular_ns_timer != None:
             self.regular_ns_timer.cancel()
             for key, timer in self.cancel_dos_timers:
@@ -24,19 +24,20 @@ class Analysis():
                     timer.cancel()
     
     def analyze(self, msg):
+        """Analyze the event msg"""
         if msg['type'] == "DAD" and msg['name'] == "Address in use":
             self.dos_new_ip6_handler(msg)
         elif msg['level'] == "EVENT" and msg['type'] == "NDP":
             self.parasite6_handler(msg)
         #elif
     
-    # Active behavior that will enhance the capability of attack detection.
     def active_detection(self):
+        """Active behavior that will enhance the capability of attack detection."""
         self.regular_ns()
         self.regular_ns_dad()
     
-    # Randomly choose a honeypot to send a Neighbor Solicitation for random target.
     def send_ns(self, dad_flag = False):
+        """Randomly choose a honeypot to send a Neighbor Solicitation for random target."""
         target = "2002:" + ':'.join(''.join(str(time.time()).split('.'))[-7:])
         source = random.choice(self.honeypots.keys())
         retry = 1
@@ -49,19 +50,19 @@ class Analysis():
         else:
             return None
     
-    # Cancel the dos attacking alert of a honeypot after a timeout.
     def cancel_dos_state(self, hn_name):
+        """Cancel the dos attacking alert of a honeypot after a timeout."""
         del self.dos_honeypots[hn_name]
     
-    # Regularly send a Neighbor Solicitation message for DAD mechanism.
     def regular_ns_dad(self):
+        """Regularly send a Neighbor Solicitation message for DAD mechanism."""
         target = self.send_ns(True)
         self.regular_ns_dad_timer = threading.Timer(10.0, self.regular_ns_dad)
         self.regular_ns_dad_timer.setDaemon(True)
         self.regular_ns_dad_timer.start()
         
-    # Detect the THC-IPv6 dos-new-ip6 attacking.
     def dos_new_ip6_handler(self, msg):
+        """Detect the THC-IPv6 dos-new-ip6 attacking."""
         dos_count = len(self.dos_honeypots) + 1
         hn_len = len(self.honeypots)
         if dos_count >= 3 or dos_count > 1 and float(dos_count)/float(hn_len) > 0.5:
@@ -83,8 +84,8 @@ class Analysis():
         self.cancel_dos_timers[msg['from']].start()
         return
     
-    # Regularly send a Neighbor Solicitation to a random target.
     def regular_ns(self):
+        """Regularly send a Neighbor Solicitation to a random target."""
         if self.regular_ns_timer != None:
             self.regular_ns_timer.cancel()
         #print "send 1 ns"
@@ -97,8 +98,8 @@ class Analysis():
         self.regular_ns_timer.setDaemon(True)
         self.regular_ns_timer.start()
     
-    # Detect the THC-IPv6: parasite6 attacking.
     def parasite6_handler(self, msg):
+        """Detect the THC-IPv6: parasite6 attacking."""
         if msg['target'] in self.solicited_targets:
             self.solicited_targets.remove(msg['target'])
             counter = self.solicited_na_counter
