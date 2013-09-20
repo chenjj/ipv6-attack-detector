@@ -6,9 +6,9 @@ import struct
 import copy
 
 class Message():
-    
-    # The format of pcap file references to http://wiki.wireshark.org/Development/LibpcapFileFormat/#Libpcap_File_Format
+    """Class message to pack different attack and event messages"""
     def __get_pcap_hdr(self):
+    """The format of pcap file references to http://wiki.wireshark.org/Development/LibpcapFileFormat/#Libpcap_File_Format"""
         #32bits
         magic_number = 0xa1b2c3d4
         #16bits
@@ -50,7 +50,7 @@ class Message():
         self.user = ''
     
     def put_msg(self, msg):
-        # Avoid putting flood messages.
+        """Avoid putting flood messages."""
         msg['from'] = self.user
         msg_copy = msg.copy()
         msg_copy['timestamp'] = int(msg_copy['timestamp'])
@@ -62,7 +62,6 @@ class Message():
         if str(msg_copy) in self.msg_record[timestamp]:
             return
         self.msg_record[timestamp].append(str(msg_copy))
-        
         
         self.msg_queue.put(msg)
         #TODO: send an event to notify the HCenter.
@@ -76,6 +75,7 @@ class Message():
         self.put_msg(msg)
         
     def save_pcap(self, attack, pkt):
+        """Not use, use save_pcaps instead"""
         hash_str = md5.md5(str(pkt)).hexdigest()
         #filename = "%s_%s.pcap" % (self.user, hash_str)
         filename = "%s.pcap" % hash_str
@@ -89,6 +89,7 @@ class Message():
         return filename
         
     def save_pcaps(self, attack, pkts):
+        """Save attack pcaps for future analysis"""
         pkt_str = ""
         if isinstance(pkts , list):
             for pkt in pkts:
@@ -101,8 +102,8 @@ class Message():
             wrpcap(location , pkts)
         return hash_str + ".pcap"
 
-        # Build a new attack/event message entity.
     def new_msg(self, pkt, save_pcap = 1):
+        """Build a new attack/event message entity."""
         msg = self.msg_templete.copy()
         if isinstance(pkt , list):
             if len(pkt) >0:
