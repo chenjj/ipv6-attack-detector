@@ -1,3 +1,4 @@
+#The hpfeeds module is written by  Mark Schloesser, refer to https://github.com/rep/hpfeeds/blob/master/cli/hpfeeds-client
 import sys
 import optparse
 import datetime
