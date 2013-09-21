@@ -28,7 +28,7 @@ Here is an example of the attacking alert message provided by 6Guard.
 Installation
 -------------
 1. Download and install `Scapy <http://www.secdev.org/projects/scapy/>`_ and `Pymongo <https://pypi.python.org/pypi/pymongo/>`_ in your machine. (Or `apt-get install python-scapy python-pymongo`)
-2. Download the latest code from `Github/chenjj/ipv6-attack-detector <https://github.com/mzweilin/ipv6-attack-detector>`_ and extract it into a directory.
+2. Download the latest code from `Github/chenjj/ipv6-attack-detector <https://github.com/chenjj/ipv6-attack-detector>`_ and extract it into a directory.
 
 
 Usage
