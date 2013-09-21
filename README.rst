@@ -1,5 +1,8 @@
-6Guard (IPv6 attack detector)
+6Guard (IPv6 attack detector) |Build Status|
 =============================
+
+.. |Build Status| image:: https://travis-ci.org/chenjj/ipv6-attack-detector.png?branch=master
+                       :target: https://travis-ci.org/chenjj/ipv6-attack-detector
 
 ##Description
 6Guard is an IPv6 attack detector aiming at link-local level security threats, including most attacks initiated by [the THC-IPv6 suit](http://thc.org/thc-ipv6/) and the advanced host discovery methods used by [Nmap](http://nmap.org). It can help the network administrators detect the link-local IPv6 attacks in the early stage.
