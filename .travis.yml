@@ -1,0 +1,24 @@
+language: python
+services:
+ - mongodb
+python:
+  - "2.7"
+virtualenv:
+  system_site_packages: true
+before_install:
+ - REPO=`pwd`
+ - echo $REPO
+ - pwd
+ - "sudo apt-get -qq update"
+ - "sudo apt-get -qq install python-dev python-scapy mongodb python-pymongo"
+install:
+ - cd /opt
+ - git clone https://github.com/chenjj/ipv6-attack-detector.git
+ - cd ipv6-attack-detector
+script: 
+ - echo $REPO
+ - pwd
+ - nosetests 
+notifications:
+ irc:
+  - "irc.freenode.org#6guard"
