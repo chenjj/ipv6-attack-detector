@@ -446,13 +446,14 @@ class Honeypot(threading.Thread):
             self.log.debug(log_msg)
             return
         #To simplfy it ,we use signature to detect different kind of fake RA. The Fake Router Advertisement initialed by Evil Foca doesn't have MTU options and RouterInfo Options and its validlifetime is less than 100
+        #The ipv6_neighbor_router_advertisement module in Metasploit needs to send a spoofed router advertisement with high priority to force hosts to start the IPv6 address auto-config and discovery link-local hosts, refer to http://wuntee.blogspot.com/2010/11/ipv6-link-local-host-discovery-concept.html
         if ICMPv6NDOptMTU not in ra and ICMPv6NDOptRouteInfo not in ra and ra[ICMPv6NDOptPrefixInfo].validlifetime < 100:
             msg = self.msg.new_msg(ra, save_pcap = 1)
             msg['type'] = "SLAAC attack"
             msg['attacker'] = ra[IPv6].src
             msg['attacker_mac'] = ra[Ether].src
             msg['name'] = "SLAAC Mitm attack"
-            msg['util'] = "Evil Foca: SLAACv6 attack"
+            msg['util'] = "Evil Foca: SLAACv6 attack; Metasploit:ipv6_neighbor_router_advertisement"
             self.msg.put_attack(msg)
         prefix = ra[ICMPv6NDOptPrefixInfo].prefix
         prefix_len = ra[ICMPv6NDOptPrefixInfo].prefixlen
