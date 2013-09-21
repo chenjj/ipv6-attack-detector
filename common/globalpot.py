@@ -198,7 +198,7 @@ class Globalpot(threading.Thread):
             msg['name'] = "ICMPv6 Echo Ping"
             msg['attacker'] = pkt[IPv6].src
             msg['attacker_mac'] = pkt[Ether].src
-            msg['util'] = "Ping, Nmap, THC-IPv6-alive6"
+            msg['util'] = "Ping, Nmap, THC-IPv6-alive6, Metasploit:ipv6_multicast_ping"
             self.msg.put_attack(msg)
     
     def clear_flood_ns(self):
