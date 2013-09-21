@@ -16,7 +16,7 @@ class Log:
                 print msg
             #msg = msg.replace('\n', "\\n")
             if self.auto_timestamp == 1:
-                timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+                timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
                 record = "%s %s %s\n" % (timestamp, self.msg_level[level], msg)
                 self.log.write(record)
             else:
