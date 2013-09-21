@@ -233,6 +233,7 @@ class Globalpot(threading.Thread):
                     
                     # Set a 5s timer to clear the flood ra alert.
                     clear_flood_ns = threading.Timer(5.0, self.clear_flood_ns)
+                    clear_flood_ns.setDaemon(True)
                     clear_flood_ns.start()
                     return
             else:
@@ -288,6 +289,7 @@ class Globalpot(threading.Thread):
                     
                     # Set a 5s timer to clear the flood ra alert.
                     clear_flood_na = threading.Timer(5.0, self.clear_flood_na)
+                    clear_flood_na.setDaemon(True)
                     clear_flood_na.start()
                     return
             return 1
@@ -320,6 +322,7 @@ class Globalpot(threading.Thread):
             
             # Set a 5s timer to clear the flood ra alert.
             clear_flood_dhcpc = threading.Timer(5.0, self.clear_flood_dhcpc)
+            clear_flood_dhcpc.setDaemon(True)
             clear_flood_dhcpc.start()
             return
             return 1
@@ -419,6 +422,7 @@ class Globalpot(threading.Thread):
                 
                 # Set a 5s timer to clear the flood ra alert.
                 clear_flood_ra = threading.Timer(5.0, self.clear_flood_ra)
+                clear_flood_ra.setDaemon(True)
                 clear_flood_ra.start()
                 return
             
