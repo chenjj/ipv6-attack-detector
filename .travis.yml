@@ -13,7 +13,7 @@ before_install:
  - "sudo apt-get -qq install python-dev python-scapy python-pymongo"
 install:
  - cd /opt
- - git clone https://github.com/chenjj/ipv6-attack-detector.git
+ - sudo git clone https://github.com/chenjj/ipv6-attack-detector.git
  - cd ipv6-attack-detector
 script: 
  - echo $REPO
