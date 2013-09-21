@@ -52,8 +52,8 @@ class SixGuard():
         self.globalpot_cfg = None
         self.gp = None
         
-        #event handle thread status
-        self.event_stop = False
+        #message handle thread status
+        self.msghandle_stop = False
         
         # Message management
         self.msg_queue = Queue()
@@ -78,7 +78,7 @@ class SixGuard():
     
     def handle_msg(self):
         """Display, log, analyze, and report the EVENT/ATTACK messages."""
-        while self.event_stop == False:
+        while self.msghandle_stop == False:
             if self.msg_queue.qsize() > 0:
                 msg = self.msg_queue.get()
                 if msg['level'] == 'EVENT' and self.event_handler != None:
@@ -157,10 +157,10 @@ class SixGuard():
                 self.send_command(cfg['name'], "STOP")
         return
     
-    def stop_eventhandle(self):
-        """stop event anaysis moudle"""
+    def stop_msghandle(self):
+        """stop distpach and analyze message"""
         if self.msg_handler != None:
-            self.event_stop = True
+            self.msghandle_stop = True
     
     def start_globalpot(self):
         """start globalpot moudle"""
@@ -193,6 +193,7 @@ def main():
         sixguard.event_handler.active_detection()
     
     def stop_6guard(signal, frame):
+        sixguard.stop_msghandle()
         sixguard.stop_all_honeypots()
         sixguard.stop_globalpot()
         sys.exit()
