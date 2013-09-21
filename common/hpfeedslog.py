@@ -156,7 +156,12 @@ class HPC(object):
         if type(chaninfo) == str:
             chaninfo = [chaninfo,]
         for c in chaninfo:
-            self.s.send(msgpublish(self.ident, c, data))
+            try:
+                self.s.send(msgpublish(self.ident, c, data))
+            except Exception, e:
+                logger.warn('connection to hpfriends lost: {0}'.format(e))
+                self.tryconnect()
+                self.s.send(msgpublish(self.ident, c, data))
 
     def stop(self):
         self.stopped = True
